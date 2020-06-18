@@ -109,7 +109,7 @@ func (r *resolver) resolveWithServers(msg *dns.Msg, servers []string) (*dns.Msg,
 			return _msg, nil
 		}
 
-		if err == dns.ErrTruncated {
+		if _msg != nil && _msg.MsgHdr.Truncated {
 			// resolve with up TCP server
 			_msg, err = r.resolving(data, s, r.doWithTCP)
 			if err == nil {
@@ -251,12 +251,14 @@ func (r *resolver) resolving(data []byte, server string, handle resolvingHandleF
 	pckSize := 512
 	recv := make([]byte, pckSize) // mostly, response is less than 512
 	var err error
+	var msg *dns.Msg
+
 	for {
 		recv, err = handle(server, data, recv)
 		if err != nil {
 			break
 		}
-		msg := &dns.Msg{}
+		msg = &dns.Msg{}
 		err = msg.Unpack(recv)
 		if err == nil {
 			// got the message
@@ -275,7 +277,7 @@ func (r *resolver) resolving(data []byte, server string, handle resolvingHandleF
 		break
 	}
 
-	if err == dns.ErrTruncated {
+	if msg != nil && msg.MsgHdr.Truncated {
 		msg := &dns.Msg{}
 		recvData := make([]byte, 1<<12) // 4096
 		for i := range r.servers {
