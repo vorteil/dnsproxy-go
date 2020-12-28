@@ -302,6 +302,7 @@ func (r *resolver) resolving(data []byte, server string, handle resolvingHandleF
 
 func (r *resolver) do(_ string, data, recv []byte) ([]byte, error) {
 	for _, conn := range r.conns {
+
 		conn.SetDeadline(time.Now().Add(wait))
 		if _, err := conn.Write(data); err != nil {
 			continue
@@ -310,8 +311,21 @@ func (r *resolver) do(_ string, data, recv []byte) ([]byte, error) {
 		if err != nil {
 			continue
 		}
+
+		// check for answers
+		msg := &dns.Msg{}
+		err = msg.Unpack(recv)
+		if err != nil {
+			continue
+		}
+
+		if len(msg.Answer) == 0 {
+			continue
+		}
+
 		return recv[:n], nil
 	}
+
 	return recv, ErrNotFound
 }
 
